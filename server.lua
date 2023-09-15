@@ -1,6 +1,3 @@
-ESX = nil
-QBCore = nil
-RegisterUsableItem = nil
 Initialized()
 local stancer = {}
 
