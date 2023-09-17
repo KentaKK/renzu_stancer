@@ -9,6 +9,11 @@ carcontrol = false
 veh_stats = {}
 local vehiclesinarea = {}
 
+RegisterNetEvent('esx:playerLoaded')
+AddEventHandler('esx:playerLoaded',function(xPlayer, isNew, skin)
+    ESX.PlayerData = xPlayer
+end)
+
 function getveh()
 	local v = GetVehiclePedIsIn(PlayerPedId(), false)
 	lastveh = GetVehiclePedIsIn(PlayerPedId(), true)
@@ -35,17 +40,17 @@ function getveh()
 end
 
 RegisterNUICallback('setvehicleheight', function(data, cb)
-	vehicle = GetVehiclePedIsIn(PlayerPedId())
+    vehicle = GetVehiclePedIsIn(PlayerPedId())
     if vehicle ~= nil and vehicle ~= 0 then
 		local ent = Entity(vehicle).state
 		plate2 = tostring(GetVehicleNumberPlateText(vehicle))
 		veh_stats[plate2] = ent.stancer
-		veh_stats[plate2].wheeledit = true
-		veh_stats[plate2].heightdata = data.val
+		--veh_stats[plate2].wheeledit = true
+		--veh_stats[plate2].heightdata = data.val
 		--ent:set('stancer', veh_stats[plate2], true)
 		SetVehicleSuspensionHeight(vehicle,data.val)
     end
-	cb(true)
+    cb(true)
 end)
 
 function SetWheelOffsetFront(vehicle, val)
@@ -249,7 +254,7 @@ end)
 AddStateBagChangeHandler('stancer' --[[key filter]], nil --[[bag filter]], function(bagName, key, value, _unused, replicated)
 	Wait(0)
 	if not value or not value['wheelsetting'] then return end
-    local vehicle = GetEntityFromStateBagName(bagName)
+        local vehicle = GetEntityFromStateBagName(bagName)
 	if not DoesEntityExist(vehicle) then return end
 	local plate = GetVehicleNumberPlateText(vehicle)
 	Stancers[plate] = vehicle
@@ -314,7 +319,7 @@ CreateThread(function()
 	end
 end)
 
-SetHeightProperly = function(v,ent)
+SetHeightProperly = function(v, ent)
 	if GetPedInVehicleSeat(v,-1) == PlayerPedId() and not justseated then
 		justseated = true
 		local c = 0
@@ -323,7 +328,7 @@ SetHeightProperly = function(v,ent)
 			c = c + 1
 			SetVehicleSuspensionHeight(v,ent.stancer.height)
 		end
-		SetVehicleSuspensionHeight(v,ent.stancer.height)
+		SetVehicleSuspensionHeight(v, ent.stancer.height)
 	end
 end
 
@@ -405,9 +410,9 @@ RegisterNUICallback('wheelsetting', function(data, cb)
     if vehicle ~= nil and vehicle ~= 0 then
 		local ent = Entity(vehicle).state
 		veh_stats[plate].wheeledit = false
-		veh_stats[plate].heightdata = ent.stancer.heightdata
+		--veh_stats[plate].heightdata = ent.stancer.heightdata
 		ent:set('stancer', veh_stats[plate], true)
-		TriggerServerEvent('renzu_stancer:save',veh_stats[plate])
+		--TriggerServerEvent('renzu_stancer:save',veh_stats[plate])
 		Notify('Vehicle Wheel Data is Saved')
 	end
 	cb(true)
@@ -443,24 +448,23 @@ function OpenStancer()
 	vehicle = GetVehiclePedIsIn(PlayerPedId(),false)
 	if not DoesEntityExist(vehicle) then return end
 	local ent = Entity(vehicle).state
-	if Config.Framework == 'Standalone' and not ent.stancer then
-		TriggerServerEvent('renzu_stancer:addstancer')
-		while not ent.stancer do Wait(1) end
-	end
-	if busy or not ent.stancer then Notify('No Stancer Kit Install') return end
+        if not ent.stancer then ent:set('stancer',{},true) end
+	if busy then Notify('No Stancer Kit Install') return end
 	local cache = ent.stancer
 	--SetReduceDriftVehicleSuspension(vehicle,true)
 	--SetVehicleHandlingField(vehicle, 'CCarHandlingData', 'strAdvancedFlags', 0x8000+0x4000000)
 	isbusy = true
-	if vehicle  ~= 0 and #(GetEntityCoords(PlayerPedId()) - GetEntityCoords(vehicle )) < 15 and GetVehicleDoorLockStatus(vehicle ) == 1 then
+	if vehicle ~= 0 then
+                print("1")
 		carcontrol = not carcontrol
 		cache.wheeledit = carcontrol
 		ent:set('stancer', cache, true)
 		local offset = {}
 		local rotation = {}
-		for i=0, 4 do
+		for i  =0, 4 do
 			offset[i] = GetVehicleWheelXOffset(vehicle,i)
 		end
+                print("2")
 		SendNUIMessage({
 			type = "show",
 			content = {bool = carcontrol, offset = offset, rotation = {
@@ -472,10 +476,12 @@ function OpenStancer()
 			size = GetVehicleWheelSize(vehicle)
 			}
 		})
+                print("3")
 		Wait(500)
 		SetNuiFocus(carcontrol,carcontrol)
 		SetNuiFocusKeepInput(true)
 		isbusy = false
+                print("4")
 		CreateThread(function()
 			while carcontrol do
 				whileinput()
@@ -484,12 +490,6 @@ function OpenStancer()
 			SetNuiFocusKeepInput(false)
 			return
 		end)
-	else
-		if GetVehicleDoorLockStatus(vehicle ) ~= 1 then
-			Notify("No Unlock Vehicle Nearby")
-		else
-			Notify("No Nearby Vehicle")
-		end
 	end
 end
 
